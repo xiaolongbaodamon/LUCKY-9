@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserDoc(data) {
+      return data.username is string && data.username.size() <= 30
+        && data.coins is number
+        && data.wins is number
+        && data.losses is number;
+    }
+
+    // Users collection: players can read public rankings/profiles, and update their own document
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if (isSignedIn() && (request.auth.uid == userId || userId.matches('^usr_.*'))) && isValidUserDoc(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // Reports collection: any authenticated or guest player can submit a report
+    match /reports/{reportId} {
+      allow create: if request.resource.data.targetPlayerName is string
+        && request.resource.data.reason is string
+        && request.resource.data.roundHash is string;
+      allow read: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Matchmaking queue for pairing real players
+    match /matchmaking_queue/{ticketId} {
+      allow read, write: if true;
+    }
+
+    // Live multiplayer game tables
+    match /tables/{tableId} {
+      allow read, write: if true;
+    }
+  }
+}

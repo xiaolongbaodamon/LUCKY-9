@@ -1,0 +1,154 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Player profile, bankroll, and game statistics",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique user ID"
+        },
+        "username": {
+          "type": "string",
+          "description": "Player display name",
+          "maxLength": 30
+        },
+        "title": {
+          "type": "string",
+          "description": "VIP title",
+          "maxLength": 30
+        },
+        "country": {
+          "type": "string",
+          "description": "Country code"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Bio quote",
+          "maxLength": 200
+        },
+        "avatarBase64": {
+          "type": "string",
+          "description": "500x500 base64 encoded avatar image"
+        },
+        "coins": {
+          "type": "number",
+          "description": "Current chip bankroll"
+        },
+        "wins": {
+          "type": "number",
+          "description": "Total round wins"
+        },
+        "losses": {
+          "type": "number",
+          "description": "Total round losses"
+        },
+        "ties": {
+          "type": "number",
+          "description": "Total ties"
+        },
+        "winrate": {
+          "type": "number",
+          "description": "Win rate percentage"
+        },
+        "highestWin": {
+          "type": "number",
+          "description": "Highest single-round profit"
+        },
+        "totalWagered": {
+          "type": "number",
+          "description": "Lifetime amount wagered"
+        },
+        "currentStreak": {
+          "type": "number",
+          "description": "Current consecutive win streak"
+        },
+        "luckyCharm": {
+          "type": "string",
+          "description": "Selected lucky charm token"
+        },
+        "antiCheatStatus": {
+          "type": "string",
+          "description": "Aegis anti-cheat verification status"
+        },
+        "lastSyncedAt": {
+          "type": "number",
+          "description": "Timestamp of last sync"
+        }
+      },
+      "required": ["username", "coins", "wins", "losses"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Suspicious activity report filed by a player",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Report case ID"
+        },
+        "targetPlayerId": {
+          "type": "string",
+          "description": "Target reported player ID"
+        },
+        "targetPlayerName": {
+          "type": "string",
+          "description": "Target reported player username"
+        },
+        "reporterId": {
+          "type": "string",
+          "description": "Reporting player ID"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Violation category"
+        },
+        "description": {
+          "type": "string",
+          "description": "Incident details"
+        },
+        "roundHash": {
+          "type": "string",
+          "description": "Attached cryptographic round seed hash"
+        },
+        "reportedAt": {
+          "type": "number",
+          "description": "Timestamp of submission"
+        },
+        "status": {
+          "type": "string",
+          "description": "Review status",
+          "enum": ["PENDING", "REVIEWED", "DISMISSED"]
+        }
+      },
+      "required": ["id", "targetPlayerName", "reason", "roundHash"]
+    },
+    "Table": {
+      "title": "Table",
+      "description": "Live 3D multiplayer table synchronized between real players",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "player1": { "type": "object" },
+        "player2": { "type": "object" },
+        "banker": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Player profile and casino statistics"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Player reports for anti-cheat fair play review"
+    },
+    "/tables/{tableId}": {
+      "schema": "Table",
+      "description": "Multiplayer table session between matched real players"
+    }
+  }
+}

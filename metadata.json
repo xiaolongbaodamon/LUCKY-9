@@ -1,0 +1,6 @@
+{
+  "name": "Lucky 9 3D Casino",
+  "description": "An immersive 3D multiplayer Lucky 9 card game featuring WebGL visuals, spatial 3D Web Audio, real-time matchmaking, provably fair anti-cheat, and global leaderboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
