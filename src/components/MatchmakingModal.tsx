@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlayerProfile, RecentEnemy } from '../types/game';
 import { multiplayerSync } from '../services/multiplayerSync';
 import { soundEngine } from '../utils/audio';
+import { CoinAmount, CoinLogo } from '../utils/coins';
 import {
   Swords,
   X,
@@ -117,9 +118,19 @@ export const MatchmakingModal: React.FC<MatchmakingModalProps> = ({
         {/* Matchmaking Info */}
         <div className="flex flex-col gap-1.5">
           <h2 className="text-xl sm:text-2xl font-black font-cinzel text-white tracking-wider">
-            FINDING OPPONENT
+            1v1 MATCHMAKING
           </h2>
-          <p className="text-xs text-amber-300 font-mono-code font-bold flex items-center justify-center gap-2">
+          {/* User Profile Preview */}
+          <div className="flex items-center justify-center gap-2.5 px-3 py-1.5 rounded-full bg-slate-950/80 border border-amber-500/30 w-fit mx-auto mt-1">
+            <div className="w-5 h-5 rounded-full overflow-hidden border border-amber-400 bg-slate-800 flex-shrink-0">
+              <img src={profile.avatarBase64} alt={profile.username} className="w-full h-full object-cover" />
+            </div>
+            <span className="text-xs font-cinzel font-bold text-white">{profile.username}</span>
+            <span className="text-slate-500">•</span>
+            <CoinAmount amount={profile.coins} compact={true} size="xs" />
+          </div>
+
+          <p className="text-xs text-amber-300 font-mono-code font-bold flex items-center justify-center gap-2 mt-2">
             <Radio className="w-4 h-4 animate-pulse text-amber-400" />
             <span>{statusMessage}</span>
           </p>

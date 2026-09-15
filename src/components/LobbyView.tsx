@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlayerProfile, RecentEnemy, FriendPlayer, MultiplayerRoom } from '../types/game';
 import { firebaseSync } from '../services/firebase';
 import { soundEngine } from '../utils/audio';
+import { CoinAmount, CoinLogo, formatCoinsCompact, formatCoinsFull } from '../utils/coins';
 import {
   Users,
   Swords,
@@ -33,7 +34,7 @@ interface LobbyViewProps {
 const CASINO_ROOMS: MultiplayerRoom[] = [
   {
     id: 'room_manila',
-    name: 'Manila Solaire VIP Lounge',
+    name: 'Manila Solaire Grand Lounge',
     minBet: 50,
     maxBet: 5000,
     location: 'Manila, Philippines 🇵🇭',
@@ -57,7 +58,7 @@ const CASINO_ROOMS: MultiplayerRoom[] = [
     minBet: 1000,
     maxBet: 50000,
     location: 'Marina Bay, SG 🇸🇬',
-    tier: 'VIP Diamond',
+    tier: 'Grand Diamond',
     activePlayersCount: 3,
     maxPlayers: 5,
   },
@@ -119,15 +120,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     showToast(`Removed ${name} from friends list.`);
   };
 
-  const handleGiftChips = (friend: FriendPlayer) => {
+  const handleGiftCoins = (friend: FriendPlayer) => {
     if (profile.coins < 100) {
       soundEngine.playLossSound();
-      showToast('Insufficient chip balance to send gift.');
+      showToast('Insufficient coin balance to send gift.');
       return;
     }
     soundEngine.playChipStack();
     firebaseSync.giftChipsToFriend(friend.id, 100);
-    showToast(`Sent $100 chips gift to ${friend.name}!`);
+    showToast(`Sent 100 coins gift to ${friend.name}! 🪙`);
   };
 
   const handleInviteFriend = (friend: FriendPlayer) => {
@@ -174,9 +175,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[10px] shadow">
-                VIP
-              </div>
             </div>
 
             <div className="flex flex-col gap-1">
@@ -210,10 +208,13 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           <div className="flex flex-wrap items-center justify-between sm:justify-end gap-4 w-full lg:w-auto pt-4 lg:pt-0 border-t lg:border-t-0 border-slate-800">
             <div className="flex flex-col items-start sm:items-end">
               <div className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">
-                Available Chips
+                Total Coins
               </div>
-              <div className="font-mono-code text-2xl sm:text-3xl font-black text-amber-300">
-                ${profile.coins.toLocaleString()}
+              <div
+                className="font-mono-code text-2xl sm:text-3xl font-black text-amber-300 flex items-center gap-1.5"
+                title={`${formatCoinsFull(profile.coins)} Total Coins`}
+              >
+                <CoinAmount amount={profile.coins} compact={true} size="xl" />
               </div>
             </div>
 
@@ -357,9 +358,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-                      <span className="text-slate-400 font-mono-code">
-                        Chips: <strong className="text-amber-300">${enemy.coins.toLocaleString()}</strong>
-                      </span>
+                      <div className="flex items-center gap-1 text-slate-400 font-mono-code">
+                        <span>Coins:</span>
+                        <CoinAmount amount={enemy.coins} compact={true} size="xs" />
+                      </div>
 
                       <div className="flex items-center gap-2">
                         <button
@@ -475,9 +477,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="text-right text-xs font-mono-code">
-                        <span className="text-amber-300">${friend.coins.toLocaleString()}</span>
-                        <div className="text-[10px] text-slate-400">{friend.winrate}% winrate</div>
+                      <div className="text-right text-xs font-mono-code flex flex-col items-end">
+                        <CoinAmount amount={friend.coins} compact={true} size="xs" />
+                        <div className="text-[10px] text-slate-400 mt-0.5">{friend.winrate}% winrate</div>
                       </div>
                     </div>
 
@@ -486,12 +488,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleGiftChips(friend)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs flex items-center gap-1"
-                          title="Send $100 Chips Gift"
+                          onClick={() => handleGiftCoins(friend)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs flex items-center gap-1.5"
+                          title="Send 100 Coins Gift"
                         >
                           <Gift className="w-3 h-3" />
-                          <span>Send $100</span>
+                          <span>Send 100 🪙</span>
                         </button>
 
                         <button
@@ -544,8 +546,14 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   </div>
 
                   <div className="flex justify-between text-xs font-mono-code mt-4 pt-3 border-t border-slate-800/80 text-slate-300">
-                    <span className="text-slate-400">Min: <strong className="text-white">${room.minBet}</strong></span>
-                    <span className="text-slate-400">Max: <strong className="text-amber-300">${room.maxBet.toLocaleString()}</strong></span>
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <span>Min:</span>
+                      <CoinAmount amount={room.minBet} compact={true} size="xs" />
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <span>Max:</span>
+                      <CoinAmount amount={room.maxBet} compact={true} size="xs" />
+                    </div>
                   </div>
                 </div>
 

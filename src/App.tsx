@@ -35,13 +35,14 @@ import { MultiplayerTableHud } from './components/MultiplayerTableHud';
 import { RoundResultBanner } from './components/RoundResultBanner';
 import { AuthScreen } from './components/AuthScreen';
 import { MatchmakingModal } from './components/MatchmakingModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
 import { multiplayerSync } from './services/multiplayerSync';
 import { LiveMultiplayerTable } from './types/game';
 import { ArrowLeft } from 'lucide-react';
 
 const DEFAULT_ROOM: MultiplayerRoom = {
   id: 'room_manila',
-  name: 'Manila Solaire VIP Lounge',
+  name: 'Manila Solaire Grand Lounge',
   minBet: 50,
   maxBet: 5000,
   location: 'Manila, Philippines 🇵🇭',
@@ -83,8 +84,9 @@ export default function App() {
     return list.length > 0 ? list[0] : null;
   });
 
-  // Bets & Chips
-  const [selectedChip, setSelectedChip] = useState<number>(100);
+  // Bets & Chips (Lowest denomination 1k / 5k / 10k)
+  const [selectedChip, setSelectedChip] = useState<number>(1000);
+  const [enemyBet, setEnemyBet] = useState<number>(1000);
   const [bets, setBets] = useState<BetMap>({
     player: 0,
     banker: 0,
@@ -124,6 +126,10 @@ export default function App() {
   const [reportTargetName, setReportTargetName] = useState<string | undefined>(undefined);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [showLobbyModal, setShowLobbyModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+
+  // Check if current user is admin
+  const isAdmin = firebaseSync.isUserAdmin(profile);
 
   // Initialize fresh shoe on startup
   useEffect(() => {
@@ -301,6 +307,53 @@ export default function App() {
     [phase, profile.coins, selectedChip, liveTableId, mySeat]
   );
 
+  // Set Custom Bet (Lowest 1K / 5K / 10K / exact amount)
+  const handleSetCustomBet = useCallback(
+    (type: BetType, amount: number) => {
+      if (phase !== 'BETTING' && phase !== 'ROUND_OVER') return;
+      const validAmount = Math.max(1000, Math.floor(amount));
+      const currentBetOnType = bets[type] || 0;
+      const difference = validAmount - currentBetOnType;
+
+      if (profile.coins < difference) {
+        soundEngine.playLossSound();
+        return;
+      }
+
+      setBets((prev) => {
+        const updated = {
+          ...prev,
+          [type]: validAmount,
+        };
+        if (liveTableId && type === 'player') {
+          multiplayerSync.placeBet(liveTableId, mySeat, updated.player);
+        }
+        return updated;
+      });
+
+      setProfile((prev) => {
+        const nextCoins = prev.coins - difference;
+        return firebaseSync.saveProfile({ coins: nextCoins });
+      });
+
+      // Synchronize rival bet in 1v1 mode
+      if (!liveTableId && type === 'player') {
+        setEnemyBet(validAmount);
+      }
+    },
+    [phase, bets, profile.coins, liveTableId, mySeat]
+  );
+
+  // Claim Free High-Roller Bonus Chips
+  const handleClaimBonusChips = useCallback(() => {
+    soundEngine.playNatural9Celebration();
+    const bonus = 50000;
+    setProfile((prev) => {
+      const nextCoins = prev.coins + bonus;
+      return firebaseSync.saveProfile({ coins: nextCoins });
+    });
+  }, []);
+
   // Clear Bets
   const handleClearBets = useCallback(() => {
     const totalCurrentBet = (Object.values(bets) as number[]).reduce((a, b) => a + b, 0);
@@ -353,12 +406,25 @@ export default function App() {
     ) => {
       setPhase('SETTLING');
 
-      const outcome = calculatePayouts(currentBets, finalPlayerHand, finalBankerHand, roundHash);
+      const activeEnemyWager = liveTable
+        ? (mySeat === 'player1' ? (liveTable.player2?.bet || 1000) : (liveTable.player1?.bet || 1000))
+        : (enemyBet || Math.max(1000, currentBets.player || 1000));
+
+      const outcome = calculatePayouts(
+        currentBets,
+        finalPlayerHand,
+        finalBankerHand,
+        roundHash,
+        finalEnemyHand,
+        activeEnemyWager
+      );
       setRoundResult(outcome);
       setWinner(outcome.winner);
 
       // Audio feedback
-      if (outcome.netProfit > 0) {
+      if (outcome.bankerSwept9) {
+        soundEngine.playLossSound();
+      } else if (outcome.netProfit > 0) {
         if (finalPlayerHand.isNatural9 || finalBankerHand.isNatural9) {
           soundEngine.playNatural9Celebration();
         } else {
@@ -371,18 +437,35 @@ export default function App() {
       }
 
       // Record profile progress in Firestore
-      const resultType = outcome.winner === 'player' ? 'win' : outcome.winner === 'banker' ? 'lose' : 'tie';
+      const resultType = outcome.winner === 'player' ? 'win' : outcome.winner === 'banker' || outcome.winner === 'enemy' ? 'lose' : 'tie';
       const updatedProfile = firebaseSync.recordGameResult(resultType, outcome.netProfit, outcome.totalBet);
       setProfile(updatedProfile);
 
+      // Update active enemy coins based on Banker 9 sweep or PvP transfer
+      if (activeEnemy) {
+        let updatedEnemyCoins = activeEnemy.coins;
+        if (outcome.bankerSwept9) {
+          // Banker sweeps: both lose bets to house
+          updatedEnemyCoins = Math.max(0, updatedEnemyCoins - activeEnemyWager);
+        } else if (outcome.pvpWinner === 'player') {
+          // Player won rival's bet
+          updatedEnemyCoins = Math.max(0, updatedEnemyCoins - (outcome.pvpCoinsTransferred || activeEnemyWager));
+        } else if (outcome.pvpWinner === 'enemy') {
+          // Rival won player's bet
+          updatedEnemyCoins = updatedEnemyCoins + (outcome.pvpCoinsTransferred || currentBets.player);
+        }
+        setActiveEnemy((prev) => (prev ? { ...prev, coins: updatedEnemyCoins } : null));
+      }
+
       // Record Match with Enemy in Recent Enemies list
       if (activeEnemy && finalEnemyHand) {
-        const enemyMatchResult: 'WON' | 'LOST' | 'TIE' =
-          finalPlayerHand.score > finalEnemyHand.score
-            ? 'WON'
-            : finalPlayerHand.score < finalEnemyHand.score
-            ? 'LOST'
-            : 'TIE';
+        const enemyMatchResult: 'WON' | 'LOST' | 'TIE' = outcome.bankerSwept9
+          ? 'LOST'
+          : outcome.pvpWinner === 'player'
+          ? 'WON'
+          : outcome.pvpWinner === 'enemy'
+          ? 'LOST'
+          : 'TIE';
 
         firebaseSync.recordMatchEnemy({
           ...activeEnemy,
@@ -395,7 +478,7 @@ export default function App() {
 
       setPhase('ROUND_OVER');
     },
-    [roundHash, activeEnemy]
+    [roundHash, activeEnemy, liveTable, mySeat, enemyBet]
   );
 
   // Deal Cards:
@@ -669,6 +752,8 @@ export default function App() {
         latencyMs={latencyMs}
         cameraPreset={cameraPreset}
         currentView={currentView}
+        isAdmin={isAdmin}
+        onOpenAdmin={() => setShowAdminModal(true)}
         onToggleView={(v) => setCurrentView(v)}
         onCycleCamera={handleCycleCamera}
         onOpenProfile={() => setShowProfileModal(true)}
@@ -731,7 +816,7 @@ export default function App() {
                     name: activeEnemy.name,
                     avatar: activeEnemy.avatar,
                     coins: activeEnemy.coins,
-                    currentBet: 250,
+                    currentBet: enemyBet,
                   }
                 : null
             }
@@ -750,6 +835,15 @@ export default function App() {
             winner={winner}
             liveTable={liveTable}
             mySeat={mySeat}
+            currentProfile={profile}
+            enemyBet={
+              liveTable
+                ? mySeat === 'player1'
+                  ? liveTable.player2?.bet || 1000
+                  : liveTable.player1?.bet || 1000
+                : enemyBet
+            }
+            playerBet={bets.player}
           />
 
           {/* Multiplayer Table Players Drawer & Chat */}
@@ -766,6 +860,8 @@ export default function App() {
               bankerHand={bankerHand}
               onSelectChip={setSelectedChip}
               onPlaceBet={handlePlaceBet}
+              onSetCustomBet={handleSetCustomBet}
+              onClaimBonusChips={handleClaimBonusChips}
               onClearBets={handleClearBets}
               onRebet={handleRebet}
               onDeal={handleDeal}
@@ -845,6 +941,16 @@ export default function App() {
         currentRoom={currentRoom}
         onSelectRoom={(room) => setCurrentRoom(room)}
         latencyMs={latencyMs}
+      />
+
+      {/* Admin Panel Modal */}
+      <AdminPanelModal
+        isOpen={showAdminModal}
+        onClose={() => setShowAdminModal(false)}
+        currentProfile={profile}
+        onCoinsUpdated={(newCoins) => {
+          setProfile((prev) => ({ ...prev, coins: newCoins }));
+        }}
       />
     </div>
   );

@@ -66,7 +66,12 @@ export interface HandEvaluation {
 export interface RoundResult {
   playerHand: HandEvaluation;
   bankerHand: HandEvaluation;
-  winner: 'player' | 'banker' | 'tie';
+  enemyHand?: HandEvaluation | null;
+  winner: 'player' | 'banker' | 'tie' | 'enemy';
+  bankerSwept9?: boolean;
+  pvpWinner?: 'player' | 'enemy' | 'tie';
+  enemyBet?: number;
+  pvpCoinsTransferred?: number;
   payouts: {
     [key in BetType]?: {
       bet: number;
@@ -83,6 +88,8 @@ export interface RoundResult {
 
 export interface PlayerProfile {
   id: string;
+  email?: string;
+  isAdmin?: boolean;
   username: string;
   title: string;
   country: string;
@@ -135,7 +142,7 @@ export interface MultiplayerRoom {
   minBet: number;
   maxBet: number;
   location: string;
-  tier: 'Casual' | 'High Roller' | 'VIP Diamond';
+  tier: 'Casual' | 'High Roller' | 'Grand Diamond' | 'Elite';
   activePlayersCount: number;
   maxPlayers: number;
 }
@@ -149,7 +156,21 @@ export interface SuspiciousActivityReport {
   description: string;
   roundHash: string;
   reportedAt: number;
-  status: 'PENDING' | 'INVESTIGATING' | 'RESOLVED';
+  status: 'PENDING' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED';
+  adminNotes?: string;
+  resolvedAt?: number;
+}
+
+export interface AdminCoinGrant {
+  id: string;
+  targetPlayerId: string;
+  targetPlayerName: string;
+  amount: number;
+  reason: string;
+  grantedAt: number;
+  grantedBy: string;
+  previousBalance: number;
+  newBalance: number;
 }
 
 export interface AntiCheatLog {

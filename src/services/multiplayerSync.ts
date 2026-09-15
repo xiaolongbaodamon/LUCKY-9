@@ -96,7 +96,7 @@ export class MultiplayerSyncService {
 
         const newTable: LiveMultiplayerTable = {
           id: tableId,
-          name: 'VIP High Stakes 1v1 Arena',
+          name: 'High Stakes 1v1 Arena',
           minBet: 50,
           maxBet: 5000,
           createdAt: Date.now(),

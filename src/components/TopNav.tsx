@@ -1,20 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PlayerProfile, MultiplayerRoom } from '../types/game';
 import { soundEngine } from '../utils/audio';
+import { CoinAmount } from '../utils/coins';
 import {
-  Volume2,
-  VolumeX,
-  Radio,
   Trophy,
   BookOpen,
   ShieldCheck,
   ShieldAlert,
-  Coins,
-  Camera,
-  Users,
-  Music,
-  Wifi,
-  Sliders,
   LogOut,
 } from 'lucide-react';
 
@@ -22,10 +14,12 @@ interface TopNavProps {
   profile: PlayerProfile;
   currentRoom: MultiplayerRoom;
   latencyMs: number;
-  cameraPreset: 'player' | 'overview' | 'cinematic';
+  cameraPreset?: 'player' | 'overview' | 'cinematic';
   currentView: 'lobby' | 'table';
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
   onToggleView: (view: 'lobby' | 'table') => void;
-  onCycleCamera: () => void;
+  onCycleCamera?: () => void;
   onOpenProfile: () => void;
   onOpenLeaderboard: () => void;
   onOpenLobby: () => void;
@@ -39,41 +33,20 @@ export const TopNav: React.FC<TopNavProps> = ({
   profile,
   currentRoom,
   latencyMs,
-  cameraPreset,
+  cameraPreset: _cameraPreset,
   currentView,
+  isAdmin = false,
+  onOpenAdmin,
   onToggleView,
-  onCycleCamera,
+  onCycleCamera: _onCycleCamera,
   onOpenProfile,
   onOpenLeaderboard,
-  onOpenLobby,
+  onOpenLobby: _onOpenLobby,
   onOpenAntiCheat,
   onOpenReport,
   onOpenRules,
   onSignOut,
 }) => {
-  const [isMuted, setIsMuted] = useState(soundEngine.getMuted());
-  const [isAmbientOn, setIsAmbientOn] = useState(soundEngine.isAmbientActive());
-  const [isSpatialOn, setIsSpatialOn] = useState(soundEngine.isSpatialEnabled());
-
-  const handleToggleMute = () => {
-    const next = !isMuted;
-    soundEngine.setMuted(next);
-    setIsMuted(next);
-  };
-
-  const handleToggleAmbient = () => {
-    soundEngine.playButtonClick();
-    const active = soundEngine.toggleAmbient();
-    setIsAmbientOn(active);
-  };
-
-  const handleToggleSpatial = () => {
-    soundEngine.playButtonClick();
-    const next = !isSpatialOn;
-    soundEngine.setSpatialEnabled(next);
-    setIsSpatialOn(next);
-  };
-
   return (
     <header className="w-full bg-slate-950/90 backdrop-blur-xl border-b border-amber-500/20 px-3 sm:px-5 py-2.5 flex items-center justify-between z-30 select-none shadow-xl shadow-black/40">
       {/* Brand & Room Info */}
@@ -94,7 +67,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                 LUCKY 9
               </h1>
               <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/50 text-amber-300 font-bold font-mono-code tracking-wider">
-                3D VIP
+                3D CASINO
               </span>
             </div>
             <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -136,62 +109,6 @@ export const TopNav: React.FC<TopNavProps> = ({
             3D Table
           </button>
         </div>
-      </div>
-
-      {/* Center Controls: Camera & Audio shortcuts */}
-      <div className="hidden md:flex items-center gap-2">
-        {/* Camera Preset Switcher */}
-        <button
-          id="camera-preset-btn"
-          onClick={() => {
-            soundEngine.playButtonClick();
-            onCycleCamera();
-          }}
-          className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700 hover:border-sky-400/60 text-xs text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-102 active:scale-98"
-          title="Switch 3D Viewpoint"
-        >
-          <Camera className="w-3.5 h-3.5 text-sky-400" />
-          <span className="capitalize font-semibold">{cameraPreset} View</span>
-        </button>
-
-        {/* 3D Spatial Audio Toggle */}
-        <button
-          id="spatial-audio-toggle-btn"
-          onClick={handleToggleSpatial}
-          className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
-            isSpatialOn
-              ? 'bg-amber-500/15 border-amber-400/60 text-amber-300 font-bold'
-              : 'bg-slate-900/90 border-slate-700 text-slate-400 hover:text-slate-200'
-          }`}
-          title="Toggle 3D Spatial Audio"
-        >
-          <Radio className={`w-3.5 h-3.5 ${isSpatialOn ? 'text-amber-400 animate-pulse' : 'text-slate-500'}`} />
-          <span>3D Audio: {isSpatialOn ? 'ON' : 'OFF'}</span>
-        </button>
-
-        {/* Ambient Lounge Hum */}
-        <button
-          id="ambient-sound-toggle-btn"
-          onClick={handleToggleAmbient}
-          className={`p-2 rounded-xl border text-xs flex items-center transition-all cursor-pointer shadow-sm ${
-            isAmbientOn
-              ? 'bg-emerald-500/15 border-emerald-400/60 text-emerald-300'
-              : 'bg-slate-900/90 border-slate-700 text-slate-500 hover:text-slate-300'
-          }`}
-          title="Ambient Casino Lounge Tone"
-        >
-          <Music className={`w-3.5 h-3.5 ${isAmbientOn ? 'text-emerald-400 animate-bounce' : ''}`} />
-        </button>
-
-        {/* Master Mute */}
-        <button
-          id="mute-sound-toggle-btn"
-          onClick={handleToggleMute}
-          className="p-2 rounded-xl bg-slate-900/90 border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm"
-          title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-        >
-          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-slate-300" />}
-        </button>
       </div>
 
       {/* Right Side: Modals and Profile */}
@@ -248,6 +165,24 @@ export const TopNav: React.FC<TopNavProps> = ({
           <ShieldAlert className="w-4 h-4" />
         </button>
 
+        {/* Admin Panel Button */}
+        {isAdmin && onOpenAdmin && (
+          <button
+            id="open-admin-panel-btn"
+            onClick={() => {
+              soundEngine.playButtonClick();
+              onOpenAdmin();
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-600/20 border border-amber-400/60 hover:border-amber-300 text-amber-300 hover:text-white transition-all cursor-pointer shadow-sm hover:scale-105 flex items-center gap-1.5"
+            title="Admin Control Center (Reports & Coin Treasury)"
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span className="hidden lg:inline text-[11px] font-cinzel font-black uppercase tracking-wider">
+              Admin
+            </span>
+          </button>
+        )}
+
         {/* Player Profile & Coin Balance Wallet */}
         <button
           id="open-profile-btn"
@@ -258,10 +193,9 @@ export const TopNav: React.FC<TopNavProps> = ({
           className="flex items-center gap-2.5 pl-3 pr-1.5 py-1 rounded-xl bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/40 border border-amber-500/40 hover:border-amber-400 transition-all group shadow-md cursor-pointer hover:scale-102 active:scale-98"
         >
           <div className="flex flex-col text-right">
-            <span className="font-mono-code font-black text-xs text-amber-300 flex items-center justify-end gap-1.5">
-              <Coins className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              ${profile.coins.toLocaleString()}
-            </span>
+            <div className="font-mono-code font-black text-xs text-amber-300 flex items-center justify-end gap-1.5">
+              <CoinAmount amount={profile.coins} compact={true} size="sm" />
+            </div>
             <span className="text-[10px] text-slate-400 group-hover:text-amber-200 font-medium">
               {profile.username}
             </span>

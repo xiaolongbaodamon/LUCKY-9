@@ -19,11 +19,11 @@ interface AuthScreenProps {
   onAuthenticated: (profile: PlayerProfile) => void;
 }
 
-const DEFAULT_VIP_NAMES = [
+const DEFAULT_PLAYER_NAMES = [
   'DragonEmperor',
   'ManilaAce',
   'GoldenNine',
-  'HighRollerVIP',
+  'HighRoller',
   'LuckyStriker',
   'CebuCardShark',
   'SolarMaverick',
@@ -37,7 +37,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState(
-    DEFAULT_VIP_NAMES[Math.floor(Math.random() * DEFAULT_VIP_NAMES.length)]
+    DEFAULT_PLAYER_NAMES[Math.floor(Math.random() * DEFAULT_PLAYER_NAMES.length)]
   );
   const [country, setCountry] = useState('PH');
 
@@ -47,7 +47,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const handleRandomizeName = () => {
     soundEngine.playButtonClick();
     const randomName =
-      DEFAULT_VIP_NAMES[Math.floor(Math.random() * DEFAULT_VIP_NAMES.length)] +
+      DEFAULT_PLAYER_NAMES[Math.floor(Math.random() * DEFAULT_PLAYER_NAMES.length)] +
       Math.floor(Math.random() * 90 + 10);
     setUsername(randomName);
   };

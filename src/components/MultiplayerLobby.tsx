@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MultiplayerRoom } from '../types/game';
 import { soundEngine } from '../utils/audio';
+import { CoinAmount, CoinLogo } from '../utils/coins';
 import {
   Users,
   Activity,
@@ -23,7 +24,7 @@ interface MultiplayerLobbyProps {
 const AVAILABLE_ROOMS: MultiplayerRoom[] = [
   {
     id: 'room_manila',
-    name: 'Manila Solaire VIP Lounge',
+    name: 'Manila Solaire Grand Lounge',
     minBet: 50,
     maxBet: 5000,
     location: 'Manila, Philippines 🇵🇭',
@@ -37,7 +38,7 @@ const AVAILABLE_ROOMS: MultiplayerRoom[] = [
     minBet: 100,
     maxBet: 10000,
     location: 'Macau SAR 🇲🇴',
-    tier: 'VIP Diamond',
+    tier: 'Grand Diamond',
     activePlayersCount: 6,
     maxPlayers: 7,
   },
@@ -189,7 +190,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({
                     <h3 className="font-cinzel font-bold text-white text-sm">{room.name}</h3>
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        room.tier === 'VIP Diamond'
+                        room.tier === 'Grand Diamond'
                           ? 'bg-purple-900/60 text-purple-300 border border-purple-500/40'
                           : room.tier === 'High Roller'
                           ? 'bg-amber-900/60 text-amber-300 border border-amber-500/40'
@@ -199,12 +200,14 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({
                       {room.tier}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 mt-1 flex items-center gap-3">
+                  <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
                     <span>{room.location}</span>
                     <span>•</span>
-                    <span className="text-amber-300 font-mono-code font-semibold">
-                      ${room.minBet} - ${room.maxBet.toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-1 font-mono-code font-semibold">
+                      <CoinAmount amount={room.minBet} compact={true} size="xs" />
+                      <span>-</span>
+                      <CoinAmount amount={room.maxBet} compact={true} size="xs" />
+                    </div>
                   </div>
                 </div>
 

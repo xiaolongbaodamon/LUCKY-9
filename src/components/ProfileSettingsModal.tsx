@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PlayerProfile } from '../types/game';
 import { firebaseSync, processImageTo500x500, generateDefaultAvatar } from '../services/firebase';
 import { soundEngine } from '../utils/audio';
+import { CoinAmount, CoinLogo, formatCoinsCompact, formatCoinsFull } from '../utils/coins';
 import {
   X,
   Upload,
@@ -42,7 +43,7 @@ const COUNTRY_OPTIONS = [
 ];
 
 const PRESET_CHARMS = [
-  'Gold Dragon Chip',
+  'Gold Dragon Coin',
   'Lucky 9 Golden Horseshoe',
   'Jade Emperor Amulet',
   'Royal Flush Clover',
@@ -103,7 +104,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
   const handleGenerateNewAvatar = () => {
     const randomColors = ['#EAB308', '#38BDF8', '#F43F5E', '#10B981', '#A855F7'];
     const col = randomColors[Math.floor(Math.random() * randomColors.length)];
-    const generated = generateDefaultAvatar(username || 'VIP', col);
+    const generated = generateDefaultAvatar(username || 'PLAYER', col);
     setAvatarBase64(generated);
     soundEngine.playButtonClick();
   };
@@ -197,7 +198,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
               <Award className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold font-cinzel text-white">Player VIP Account</h2>
+              <h2 className="text-base font-bold font-cinzel text-white">Player Account Profile</h2>
               <p className="text-xs text-slate-400">500x500 Base64 Avatar • Firebase Cloud Sync</p>
             </div>
           </div>
@@ -326,7 +327,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">VIP Title</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Player Title</label>
                   <input
                     type="text"
                     value={title}
@@ -405,9 +406,9 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
-                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">Bankroll</div>
-                  <div className="font-mono-code font-bold text-amber-400 text-base mt-0.5">
-                    ${profile.coins.toLocaleString()}
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total Coins</div>
+                  <div className="font-mono-code font-bold text-amber-400 text-base mt-0.5 flex items-center justify-center">
+                    <CoinAmount amount={profile.coins} compact={true} size="md" />
                   </div>
                 </div>
 
@@ -441,13 +442,13 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                   <div className="flex justify-between py-1.5 border-b border-slate-800/80">
                     <span className="text-slate-400">Highest Win</span>
                     <span className="font-mono-code text-amber-300 font-bold">
-                      +${profile.highestWin.toLocaleString()}
+                      <CoinAmount amount={profile.highestWin} compact={true} size="sm" />
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-800/80">
                     <span className="text-slate-400">Total Wagered</span>
                     <span className="font-mono-code text-slate-300">
-                      ${profile.totalWagered.toLocaleString()}
+                      <CoinAmount amount={profile.totalWagered} compact={true} size="sm" />
                     </span>
                   </div>
                 </div>
@@ -456,9 +457,9 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
               {/* Free Bankroll Refill (for test & gameplay convenience) */}
               <div className="flex items-center justify-between p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
                 <div>
-                  <div className="text-sm font-bold text-amber-300">Complimentary VIP Chip Reload</div>
+                  <div className="text-sm font-bold text-amber-300">Complimentary Coin Refill</div>
                   <div className="text-xs text-amber-200/70">
-                    Claim +$2,500 complimentary high-roller chips if you need a reload.
+                    Claim +2,500 complimentary coins if you need a refill.
                   </div>
                 </div>
                 <button
@@ -468,9 +469,10 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({
                     const updated = firebaseSync.refillFreeCoins(2500);
                     onProfileUpdate(updated);
                   }}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase tracking-wider shadow-md"
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-cinzel font-bold text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5"
                 >
-                  Reload $2,500
+                  <CoinLogo size="xs" />
+                  <span>Claim 2,500 Coins</span>
                 </button>
               </div>
             </div>

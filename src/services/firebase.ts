@@ -22,15 +22,15 @@ import {
   getDocs,
   serverTimestamp,
 } from 'firebase/firestore';
-import { PlayerProfile, LeaderboardUser, SuspiciousActivityReport, AntiCheatLog, RecentEnemy, FriendPlayer } from '../types/game';
+import { PlayerProfile, LeaderboardUser, SuspiciousActivityReport, AntiCheatLog, RecentEnemy, FriendPlayer, AdminCoinGrant } from '../types/game';
 
 export const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyC3ncFpTNsBKwnmBPAxbhEmTvr39W2j9FA",
-  authDomain: "lucky-9-5c84b.firebaseapp.com",
-  projectId: "lucky-9-5c84b",
-  storageBucket: "lucky-9-5c84b.firebasestorage.app",
-  messagingSenderId: "1068388882269",
-  appId: "1:1068388882269:web:d5fcb0b5e60e8d44acfab4",
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || "AIzaSyC3ncFpTNsBKwnmBPAxbhEmTvr39W2j9FA",
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || "lucky-9-5c84b.firebaseapp.com",
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || "lucky-9-5c84b",
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || "lucky-9-5c84b.firebasestorage.app",
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || "1068388882269",
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || "1:1068388882269:web:d5fcb0b5e60e8d44acfab4",
 };
 
 // Initialize Firebase App
@@ -45,6 +45,10 @@ const REPORTS_STORAGE_KEY = 'lucky9_reports_list';
 const FIREBASE_CONFIG_KEY = 'lucky9_firebase_config';
 const RECENT_ENEMIES_STORAGE_KEY = 'lucky9_recent_enemies';
 const FRIENDS_STORAGE_KEY = 'lucky9_friends_list';
+const ADMIN_GRANTS_KEY = 'lucky9_admin_grants';
+const ADMIN_OVERRIDE_KEY = 'lucky9_admin_override';
+
+export const ADMIN_EMAILS = ['xiaolongbao312006@gmail.com'];
 
 export interface CustomFirebaseConfig {
   apiKey?: string;
@@ -96,10 +100,10 @@ export function generateDefaultAvatar(username: string, themeColor: string = '#E
   const initial = (username.trim()[0] || '9').toUpperCase();
   ctx.fillText(initial, 250, 235);
 
-  // Subtitle 'LUCKY 9 VIP'
+  // Subtitle 'LUCKY 9'
   ctx.font = '600 24px Plus Jakarta Sans, sans-serif';
   ctx.fillStyle = '#94A3B8';
-  ctx.fillText('VIP HIGH ROLLER', 250, 360);
+  ctx.fillText('HIGH ROLLER', 250, 360);
 
   return canvas.toDataURL('image/png');
 }
@@ -311,7 +315,7 @@ class FirebaseSyncService {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      const userDisplayName = user.displayName || user.email?.split('@')[0] || 'VIP_Gambler';
+      const userDisplayName = user.displayName || user.email?.split('@')[0] || 'Lucky9_Player';
       const updated = this.saveProfile({
         id: user.uid,
         username: userDisplayName,
@@ -577,7 +581,7 @@ class FirebaseSyncService {
   private generateLeaderboardData(): LeaderboardUser[] {
     const baseNames = [
       { name: 'DragonEmperor', country: 'PH', title: 'Grandmaster 9', coins: 184500, wins: 412, winrate: 78.4, badge: 'Diamond IX' },
-      { name: 'LuckyCharm_Ace', country: 'SG', title: 'Casino VIP', coins: 142000, wins: 330, winrate: 72.1, badge: 'High Roller' },
+      { name: 'LuckyCharm_Ace', country: 'SG', title: 'Casino Champion', coins: 142000, wins: 330, winrate: 72.1, badge: 'High Roller' },
       { name: 'TokyoNines', country: 'JP', title: 'Card Counter', coins: 119800, wins: 285, winrate: 69.8, badge: 'Master' },
       { name: 'MacauWhale_V', country: 'MO', title: 'Dragon King', coins: 98500, wins: 220, winrate: 67.2, badge: 'High Roller' },
       { name: 'CebuHighRoller', country: 'PH', title: 'Table Champion', coins: 84300, wins: 198, winrate: 65.5, badge: 'Gold' },
@@ -632,6 +636,190 @@ class FirebaseSyncService {
   public getReports(): SuspiciousActivityReport[] {
     try {
       const data = localStorage.getItem(REPORTS_STORAGE_KEY);
+      if (data) return JSON.parse(data);
+    } catch {
+      // Ignore
+    }
+    return [];
+  }
+
+  /**
+   * Admin Capabilities
+   */
+  public isUserAdmin(userProfile?: PlayerProfile): boolean {
+    const prof = userProfile || this.profile;
+    const email = (this.currentUser?.email || prof.email || '').toLowerCase().trim();
+    if (ADMIN_EMAILS.some((adminEmail) => email === adminEmail.toLowerCase())) {
+      return true;
+    }
+    if (prof.isAdmin) {
+      return true;
+    }
+    if (prof.username && (prof.username.toLowerCase() === 'xiaolongbao' || prof.username.toLowerCase().includes('admin'))) {
+      return true;
+    }
+    try {
+      if (localStorage.getItem(ADMIN_OVERRIDE_KEY) === 'true') {
+        return true;
+      }
+    } catch {
+      // Ignore
+    }
+    return false;
+  }
+
+  public setAdminOverride(enabled: boolean): void {
+    try {
+      localStorage.setItem(ADMIN_OVERRIDE_KEY, enabled ? 'true' : 'false');
+    } catch {
+      // Ignore
+    }
+    this.profile.isAdmin = enabled;
+    this.saveProfile(this.profile);
+    this.profileListeners.forEach((fn) => fn(this.profile));
+  }
+
+  public async fetchReportsFromFirestore(): Promise<SuspiciousActivityReport[]> {
+    try {
+      const reportsCol = collection(db, 'reports');
+      const snap = await getDocs(reportsCol);
+      if (!snap.empty) {
+        const cloudReports: SuspiciousActivityReport[] = [];
+        snap.forEach((d) => {
+          cloudReports.push(d.data() as SuspiciousActivityReport);
+        });
+        cloudReports.sort((a, b) => b.reportedAt - a.reportedAt);
+        localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(cloudReports.slice(0, 100)));
+        return cloudReports;
+      }
+    } catch (err) {
+      console.warn('Could not fetch reports from firestore:', err);
+    }
+    return this.getReports();
+  }
+
+  public async updateReportStatus(
+    reportId: string,
+    status: SuspiciousActivityReport['status'],
+    adminNotes?: string
+  ): Promise<void> {
+    const reports = this.getReports();
+    const target = reports.find((r) => r.id === reportId);
+    if (target) {
+      target.status = status;
+      if (adminNotes !== undefined) target.adminNotes = adminNotes;
+      if (status === 'RESOLVED' || status === 'DISMISSED') {
+        target.resolvedAt = Date.now();
+      }
+      try {
+        localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports));
+        const reportRef = doc(db, 'reports', reportId);
+        await setDoc(reportRef, target, { merge: true });
+      } catch (err) {
+        console.warn('Error saving report status update:', err);
+      }
+    }
+  }
+
+  public async giveUserCoins(
+    targetIdOrName: string,
+    amount: number,
+    reason: string = 'Admin Treasury Grant'
+  ): Promise<{ success: boolean; targetName: string; newBalance: number }> {
+    const trimmedTarget = targetIdOrName.trim();
+    let newBalance = 0;
+    let targetName = trimmedTarget;
+    let targetId = trimmedTarget;
+
+    // Check if target is current player
+    const isSelf =
+      this.profile.id === trimmedTarget ||
+      this.profile.username.toLowerCase() === trimmedTarget.toLowerCase() ||
+      trimmedTarget.toLowerCase() === 'me' ||
+      trimmedTarget.toLowerCase() === 'self' ||
+      trimmedTarget.toLowerCase() === 'admin' ||
+      trimmedTarget.toLowerCase() === 'xiaolongbao';
+
+    if (isSelf) {
+      const prev = this.profile.coins;
+      this.profile.coins = Math.max(0, Math.round(this.profile.coins + amount));
+      newBalance = this.profile.coins;
+      targetName = this.profile.username;
+      targetId = this.profile.id;
+      this.saveProfile(this.profile);
+      this.profileListeners.forEach((fn) => fn(this.profile));
+      await this.syncToFirebaseFirestore(this.profile);
+    } else {
+      // Check leaderboard cache
+      let foundInLb = false;
+      try {
+        const lbRaw = localStorage.getItem(LEADERBOARD_CACHE_KEY);
+        if (lbRaw) {
+          const lb: LeaderboardUser[] = JSON.parse(lbRaw);
+          const found = lb.find(
+            (u) => u.id === trimmedTarget || u.username.toLowerCase() === trimmedTarget.toLowerCase()
+          );
+          if (found) {
+            found.coins = Math.max(0, Math.round(found.coins + amount));
+            newBalance = found.coins;
+            targetName = found.username;
+            targetId = found.id;
+            foundInLb = true;
+            localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify(lb));
+          }
+        }
+      } catch {
+        // Ignore
+      }
+
+      if (!foundInLb) {
+        try {
+          const userRef = doc(db, 'users', trimmedTarget);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            const data = snap.data() as PlayerProfile;
+            const updatedCoins = Math.max(0, Math.round((data.coins || 0) + amount));
+            await setDoc(userRef, { coins: updatedCoins, lastSyncedAt: Date.now() }, { merge: true });
+            newBalance = updatedCoins;
+            targetName = data.username || trimmedTarget;
+          } else {
+            newBalance = Math.max(0, amount);
+          }
+        } catch {
+          newBalance = Math.max(0, amount);
+        }
+      }
+    }
+
+    // Log the grant
+    const grant: AdminCoinGrant = {
+      id: `grant_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      targetPlayerId: targetId,
+      targetPlayerName: targetName,
+      amount,
+      reason,
+      grantedAt: Date.now(),
+      grantedBy: this.currentUser?.email || this.profile.username || 'xiaolongbao (Admin)',
+      previousBalance: isSelf ? newBalance - amount : 0,
+      newBalance,
+    };
+
+    try {
+      const existingGrants = this.getAdminGrants();
+      existingGrants.unshift(grant);
+      localStorage.setItem(ADMIN_GRANTS_KEY, JSON.stringify(existingGrants.slice(0, 50)));
+      const grantRef = doc(db, 'admin_grants', grant.id);
+      setDoc(grantRef, grant).catch(() => {});
+    } catch {
+      // Storage safety
+    }
+
+    return { success: true, targetName, newBalance };
+  }
+
+  public getAdminGrants(): AdminCoinGrant[] {
+    try {
+      const data = localStorage.getItem(ADMIN_GRANTS_KEY);
       if (data) return JSON.parse(data);
     } catch {
       // Ignore
@@ -714,7 +902,7 @@ class FirebaseSyncService {
       country: 'PH',
       coins: 25000,
       status: 'ONLINE_LOBBY',
-      currentRoomName: 'Manila Solaire VIP Lounge',
+      currentRoomName: 'Manila Solaire Grand Lounge',
       winrate: 65.0,
       mutualGames: 1,
     };
@@ -756,7 +944,7 @@ class FirebaseSyncService {
           players.push({
             id: data.uid,
             username: data.username,
-            title: data.title || 'VIP Player',
+            title: data.title || 'Card Player',
             country: data.country || 'PH',
             bio: data.bio || '',
             avatarBase64: data.avatarBase64 || generateDefaultAvatar(data.username),

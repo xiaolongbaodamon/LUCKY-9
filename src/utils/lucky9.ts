@@ -145,43 +145,126 @@ export function determineWinner(
 }
 
 /**
- * Compute round payouts based on bets
+ * Compute round payouts based on bets, incorporating the Lucky 9 House & PvP rules:
+ * 1. If the Banker scores 9, all bets of both players go straight to the Banker!
+ * 2. If Banker doesn't score 9, players battle head-to-head:
+ *    - If Player wins vs Enemy, Enemy's bet is deducted and added to Player (plus Player's win vs Banker).
+ *    - If Enemy wins vs Player, Player's bet is deducted and given to Enemy.
  */
 export function calculatePayouts(
   bets: BetMap,
   playerHand: HandEvaluation,
   bankerHand: HandEvaluation,
-  roundHash: string
+  roundHash: string,
+  enemyHand?: HandEvaluation | null,
+  enemyBet: number = 1000
 ): RoundResult {
-  const winner = determineWinner(playerHand, bankerHand);
   const totalBet = Object.values(bets).reduce((a, b) => a + b, 0);
-
   const payouts: RoundResult['payouts'] = {};
-  let totalWon = 0;
 
-  // 1. Player Bet (1:1 standard; Natural 9 pays 2:1)
-  if (bets.player > 0) {
-    if (winner === 'player') {
-      const payoutMultiplier = playerHand.isNatural9 ? 2.0 : 1.0;
-      const winAmount = bets.player + Math.floor(bets.player * payoutMultiplier);
-      payouts.player = { bet: bets.player, won: true, payout: winAmount };
-      totalWon += winAmount;
-    } else if (winner === 'tie') {
-      // Push: return original bet
-      payouts.player = { bet: bets.player, won: false, payout: bets.player };
-      totalWon += bets.player;
+  // RULE 1: If the banker got 9, all the bet of both players will go to banker!
+  if (bankerHand.score === 9) {
+    // Both players lose their bets to the Banker
+    payouts.player = { bet: bets.player, won: false, payout: 0 };
+    payouts.banker = { bet: bets.banker, won: false, payout: 0 };
+    payouts.tie = { bet: bets.tie, won: false, payout: 0 };
+    payouts.playerPair = { bet: bets.playerPair, won: false, payout: 0 };
+    payouts.bankerPair = { bet: bets.bankerPair, won: false, payout: 0 };
+    payouts.natural9 = { bet: bets.natural9, won: false, payout: 0 };
+
+    return {
+      playerHand,
+      bankerHand,
+      enemyHand,
+      winner: 'banker',
+      bankerSwept9: true,
+      pvpWinner: 'tie',
+      enemyBet,
+      pvpCoinsTransferred: 0,
+      payouts,
+      totalWon: 0,
+      totalBet,
+      netProfit: -totalBet,
+      roundHash,
+      timestamp: Date.now(),
+    };
+  }
+
+  // RULE 2: Banker did not get 9. Check PvP 1v1 between Player and Enemy!
+  let totalWon = 0;
+  let pvpWinner: 'player' | 'enemy' | 'tie' = 'tie';
+  let pvpCoinsTransferred = 0;
+  let overallWinner: 'player' | 'banker' | 'tie' | 'enemy' = 'player';
+
+  if (enemyHand) {
+    if (playerHand.score > enemyHand.score) {
+      // Player won the 1v1 duel against Enemy!
+      pvpWinner = 'player';
+      pvpCoinsTransferred = enemyBet;
+      // Enemy's bet is added to the Player
+      totalWon += pvpCoinsTransferred;
+      overallWinner = 'player';
+    } else if (enemyHand.score > playerHand.score) {
+      // Enemy won the 1v1 duel against Player!
+      pvpWinner = 'enemy';
+      // Player's bet is deducted and transferred to Enemy
+      pvpCoinsTransferred = bets.player > 0 ? bets.player : totalBet;
+      overallWinner = 'enemy';
     } else {
-      payouts.player = { bet: bets.player, won: false, payout: 0 };
+      // Tie between Player and Enemy
+      pvpWinner = 'tie';
+      pvpCoinsTransferred = 0;
     }
   }
 
-  // 2. Banker Bet (1:1 standard; push on tie)
+  // Now resolve player's table bets against Banker:
+  const vsBankerResult = determineWinner(playerHand, bankerHand);
+
+  // 1. Player Bet on Table:
+  // If Enemy won the PvP duel, Player's bet went to Enemy (payout = 0)
+  if (bets.player > 0) {
+    if (pvpWinner === 'enemy') {
+      payouts.player = { bet: bets.player, won: false, payout: 0 };
+    } else if (pvpWinner === 'player') {
+      // Player beat Enemy! If Player ALSO beats Banker, receive house payout:
+      if (vsBankerResult === 'player') {
+        const payoutMultiplier = playerHand.isNatural9 ? 2.0 : 1.0;
+        const winAmount = bets.player + Math.floor(bets.player * payoutMultiplier);
+        payouts.player = { bet: bets.player, won: true, payout: winAmount };
+        totalWon += winAmount;
+      } else if (vsBankerResult === 'tie') {
+        payouts.player = { bet: bets.player, won: false, payout: bets.player };
+        totalWon += bets.player;
+      } else {
+        // Player lost to Banker on the felt, but won Enemy's bet
+        payouts.player = { bet: bets.player, won: false, payout: 0 };
+      }
+    } else {
+      // PvP was a Tie, resolve purely vs Banker
+      if (vsBankerResult === 'player') {
+        const payoutMultiplier = playerHand.isNatural9 ? 2.0 : 1.0;
+        const winAmount = bets.player + Math.floor(bets.player * payoutMultiplier);
+        payouts.player = { bet: bets.player, won: true, payout: winAmount };
+        totalWon += winAmount;
+        overallWinner = 'player';
+      } else if (vsBankerResult === 'tie') {
+        payouts.player = { bet: bets.player, won: false, payout: bets.player };
+        totalWon += bets.player;
+        overallWinner = 'tie';
+      } else {
+        payouts.player = { bet: bets.player, won: false, payout: 0 };
+        overallWinner = 'banker';
+      }
+    }
+  }
+
+  // 2. Banker Bet
   if (bets.banker > 0) {
-    if (winner === 'banker') {
+    if (vsBankerResult === 'banker') {
       const winAmount = bets.banker + bets.banker;
       payouts.banker = { bet: bets.banker, won: true, payout: winAmount };
       totalWon += winAmount;
-    } else if (winner === 'tie') {
+    } else if (vsBankerResult === 'tie') {
       payouts.banker = { bet: bets.banker, won: false, payout: bets.banker };
       totalWon += bets.banker;
     } else {
@@ -191,7 +274,7 @@ export function calculatePayouts(
 
   // 3. Tie Bet (8:1 payout)
   if (bets.tie > 0) {
-    if (winner === 'tie') {
+    if (vsBankerResult === 'tie') {
       const winAmount = bets.tie + bets.tie * 8;
       payouts.tie = { bet: bets.tie, won: true, payout: winAmount };
       totalWon += winAmount;
@@ -238,7 +321,12 @@ export function calculatePayouts(
   return {
     playerHand,
     bankerHand,
-    winner,
+    enemyHand,
+    winner: overallWinner,
+    bankerSwept9: false,
+    pvpWinner,
+    enemyBet,
+    pvpCoinsTransferred,
     payouts,
     totalWon,
     totalBet,

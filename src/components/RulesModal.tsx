@@ -38,16 +38,39 @@ export const RulesModal: React.FC<RulesModalProps> = ({ isOpen, onClose }) => {
 
         {/* Content */}
         <div className="p-6 overflow-y-auto flex flex-col gap-6 text-xs text-slate-300 leading-relaxed">
-          {/* Objective */}
+          {/* Game Objective */}
           <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col gap-2">
             <h3 className="font-cinzel font-bold text-amber-400 text-sm flex items-center gap-1.5">
               <Trophy className="w-4 h-4" />
-              Game Objective
+              Game Objective & Table Rules
             </h3>
             <p>
-              Lucky 9 is a beloved card game where the goal is to form a hand with a point value closest to{' '}
-              <strong className="text-amber-300">9</strong>. The total value is calculated by adding the values of all cards in the hand and taking the last digit (modulo 10).
+              Lucky 9 is an authentic high-stakes card game where the goal is to form a hand with a point value closest to{' '}
+              <strong className="text-amber-300">9</strong> (modulo 10). Both real players battle head-to-head on the table while the automated Banker is provided by the system.
             </p>
+          </div>
+
+          {/* New Special House & PvP Rules */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-red-950/70 via-slate-950 to-amber-950/70 border-2 border-amber-500/50 flex flex-col gap-3">
+            <h3 className="font-cinzel font-black text-amber-300 text-sm flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              Special Table Rules: Banker 9 & 1v1 PvP Transfer
+            </h3>
+            <div className="space-y-2 text-xs text-slate-200">
+              <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-500/40">
+                <strong className="text-rose-300">🏛️ Banker 9 Sweep Rule:</strong> If the Banker scores 9 (Natural 9 or 3-card 9), the House sweeps the table! All bets from both players go directly to the Banker.
+              </div>
+              <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40">
+                <strong className="text-emerald-300">⚔️ 1v1 PvP Bet Transfer:</strong> If the Banker does not score 9, the two players battle head-to-head:
+                <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-300">
+                  <li>If you beat your opponent, their bet is <strong>deducted and added to your payout</strong>!</li>
+                  <li>If your opponent beats you, your bet is deducted and awarded to the opponent.</li>
+                </ul>
+              </div>
+              <div className="p-2.5 rounded-lg bg-amber-950/60 border border-amber-500/40">
+                <strong className="text-amber-300">💰 Minimum Betting Denominations:</strong> The minimum bet is <strong>1,000 (1K)</strong>. Standard chips are <strong>1K, 5K, 10K, 25K, 50K, 100K</strong>, or players can use the custom bet section to place any custom amount.
+              </div>
+            </div>
           </div>
 
           {/* Card Values */}

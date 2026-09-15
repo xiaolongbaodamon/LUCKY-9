@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LeaderboardUser, PlayerProfile } from '../types/game';
 import { firebaseSync } from '../services/firebase';
 import { soundEngine } from '../utils/audio';
+import { CoinAmount, CoinLogo, formatCoinsCompact } from '../utils/coins';
 import {
   Trophy,
   RefreshCw,
@@ -146,7 +147,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
               }`}
             >
               <Coins className="w-3.5 h-3.5" />
-              Highest Bankroll
+              Most Coins
             </button>
             <button
               id="filter-winrate-btn"
@@ -250,10 +251,10 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="min-w-[100px]">
-                    <div className="text-[11px] text-slate-400">Bankroll</div>
-                    <div className="font-mono-code font-bold text-amber-400 text-sm">
-                      ${user.coins.toLocaleString()}
+                  <div className="min-w-[100px] flex flex-col items-end">
+                    <div className="text-[11px] text-slate-400">Total Coins</div>
+                    <div className="font-mono-code font-bold text-amber-400 text-sm mt-0.5">
+                      <CoinAmount amount={user.coins} compact={true} size="sm" />
                     </div>
                   </div>
                 </div>

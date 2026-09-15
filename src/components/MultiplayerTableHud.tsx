@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MultiplayerPlayer, GamePhase } from '../types/game';
 import { soundEngine } from '../utils/audio';
+import { formatCoinsCompact, CoinLogo } from '../utils/coins';
 import { MessageSquare, Smile, Send, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface MultiplayerTableHudProps {
@@ -131,22 +132,8 @@ export const MultiplayerTableHud: React.FC<MultiplayerTableHudProps> = ({
   };
 
   return (
-    <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-2 max-w-[280px] sm:max-w-xs pointer-events-auto">
-      {/* Active Table Players Drawer / Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-        {players.map((p) => (
-          <div
-            key={p.id}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-900/80 border border-slate-800 backdrop-blur text-[11px] shadow-sm flex-shrink-0"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="font-semibold text-slate-200">{p.name}</span>
-            <span className="font-mono-code text-[10px] text-amber-300">${p.currentBet}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Live Table Chat Box */}
+    <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-2 max-w-[260px] pointer-events-auto">
+      {/* Live Table Chat Box (Foldable on bottom right) */}
       <div className="bg-slate-950/85 border border-slate-800/80 rounded-2xl shadow-xl backdrop-blur-md overflow-hidden flex flex-col">
         {/* Toggle Chat Bar */}
         <div
@@ -155,7 +142,7 @@ export const MultiplayerTableHud: React.FC<MultiplayerTableHudProps> = ({
         >
           <span className="flex items-center gap-1.5 font-semibold text-[11px] text-slate-300">
             <MessageSquare className="w-3.5 h-3.5 text-sky-400" />
-            Table Chat & Reactions
+            1v1 Match Chat
           </span>
           {isChatExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
         </div>

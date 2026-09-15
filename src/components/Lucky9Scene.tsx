@@ -193,10 +193,10 @@ export const Lucky9Scene: React.FC<Lucky9SceneProps> = ({
     scene.fog = new THREE.FogExp2(0x070b14, 0.035);
     sceneRef.current = scene;
 
-    // Camera oriented from player view facing the table (player in foreground, enemy across, banker on left)
-    const camera = new THREE.PerspectiveCamera(44, width / height, 0.1, 100);
-    camera.position.set(0, 8.2, 9.2);
-    camera.lookAt(0, 0, 0.1);
+    // Camera oriented from player view facing the table (elevated so table and cards are fully visible above UI)
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+    camera.position.set(0, 7.4, 7.2);
+    camera.lookAt(0, -0.3, -0.2);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
@@ -257,16 +257,16 @@ export const Lucky9Scene: React.FC<Lucky9SceneProps> = ({
 
     const feltGeo = new THREE.ShapeGeometry(feltShape, 32);
     const feltMat = new THREE.MeshStandardMaterial({
-      color: 0x064e3b, // Deep emerald casino green
-      roughness: 0.85,
-      metalness: 0.05,
+      color: 0x881337, // Rich Velvet Crimson Red (like the Uno digital tabletop)
+      roughness: 0.82,
+      metalness: 0.08,
     });
     const feltMesh = new THREE.Mesh(feltGeo, feltMat);
     feltMesh.rotation.x = -Math.PI / 2;
     feltMesh.receiveShadow = true;
     tableGroup.add(feltMesh);
 
-    // Markings Canvas: Player bottom, Enemy top in front, Banker on the left
+    // Markings Canvas: Dynamic tabletop swirl arena with 1v1 Real Players and System Banker
     const markCanvas = document.createElement('canvas');
     markCanvas.width = 2048;
     markCanvas.height = 1024;
@@ -274,63 +274,90 @@ export const Lucky9Scene: React.FC<Lucky9SceneProps> = ({
     mctx.clearRect(0, 0, 2048, 1024);
 
     // Outer border
-    mctx.strokeStyle = 'rgba(234, 179, 8, 0.45)';
+    mctx.strokeStyle = 'rgba(251, 191, 36, 0.55)';
     mctx.lineWidth = 8;
     mctx.strokeRect(100, 80, 1848, 864);
 
-    // Table Brand in center
-    mctx.fillStyle = 'rgba(234, 179, 8, 0.75)';
-    mctx.font = 'bold 44px Cinzel, serif';
-    mctx.textAlign = 'center';
-    mctx.fillText('LUCKY 9 CASINO ROYAL', 1024, 490);
+    // Dynamic Central Swirl Ring (Matching the Uno arena screenshot)
+    mctx.save();
+    mctx.translate(1024, 512);
+    mctx.strokeStyle = 'rgba(245, 158, 11, 0.25)';
+    mctx.lineWidth = 14;
+    mctx.beginPath();
+    mctx.arc(0, 0, 310, 0, Math.PI * 2);
+    mctx.stroke();
 
-    // 1. BANKER WING: Left side of table
+    // Curved dynamic arrows
+    mctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+    mctx.lineWidth = 10;
+    mctx.beginPath();
+    mctx.arc(0, 0, 260, 0.3, 2.8);
+    mctx.stroke();
+
+    mctx.beginPath();
+    mctx.arc(0, 0, 260, 3.4, 5.9);
+    mctx.stroke();
+    mctx.restore();
+
+    // Table Brand in center
+    mctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
+    mctx.font = '900 42px Cinzel, serif';
+    mctx.textAlign = 'center';
+    mctx.fillText('LUCKY 9 CASINO ROYALE', 1024, 490);
+    mctx.font = 'bold 22px Plus Jakarta Sans, sans-serif';
+    mctx.fillStyle = 'rgba(253, 230, 138, 0.75)';
+    mctx.fillText('1v1 REAL PLAYERS • BANKER BY SYSTEM', 1024, 535);
+
+    // 1. BANKER WING: Left side of table (PROVIDED BY SYSTEM)
     mctx.strokeStyle = '#F43F5E';
     mctx.lineWidth = 6;
-    mctx.strokeRect(160, 200, 360, 624);
+    mctx.strokeRect(140, 190, 400, 644);
     mctx.fillStyle = '#F43F5E';
     mctx.font = 'bold 36px Cinzel, serif';
-    mctx.fillText('BANKER (HOUSE)', 340, 260);
-    mctx.font = '22px Plus Jakarta Sans';
+    mctx.fillText('BANKER', 340, 250);
+    mctx.font = 'bold 22px Plus Jakarta Sans';
     mctx.fillStyle = '#FECDD3';
-    mctx.fillText('PAYS 1:1', 340, 305);
+    mctx.fillText('PROVIDED BY SYSTEM', 340, 290);
+    mctx.font = '18px Plus Jakarta Sans';
+    mctx.fillStyle = '#FDA4AF';
+    mctx.fillText('Automated House Dealer • Pays 1:1', 340, 325);
 
-    // 2. ENEMY ZONE: Top center (facing player)
+    // 2. ENEMY ZONE: Top center (OPPONENT / REAL PLAYER)
     mctx.strokeStyle = '#A855F7';
-    mctx.lineWidth = 5;
-    mctx.strokeRect(724, 120, 600, 240);
+    mctx.lineWidth = 6;
+    mctx.strokeRect(724, 110, 600, 230);
     mctx.fillStyle = '#C084FC';
-    mctx.font = 'bold 32px Cinzel, serif';
-    mctx.fillText('OPPONENT / ENEMY', 1024, 170);
-    mctx.font = '20px Plus Jakarta Sans';
+    mctx.font = 'bold 34px Cinzel, serif';
+    mctx.fillText('OPPONENT', 1024, 160);
+    mctx.font = 'bold 22px Plus Jakarta Sans';
     mctx.fillStyle = '#E9D5FF';
-    mctx.fillText('HEAD-TO-HEAD MATCH', 1024, 210);
+    mctx.fillText('REAL PLAYER SEAT', 1024, 200);
 
-    // 3. PLAYER ZONE: Bottom center (closest to camera)
+    // 3. PLAYER ZONE: Bottom center (YOU / REAL PLAYER)
     mctx.strokeStyle = '#38BDF8';
     mctx.lineWidth = 6;
-    mctx.strokeRect(724, 660, 600, 240);
+    mctx.strokeRect(724, 680, 600, 230);
     mctx.fillStyle = '#38BDF8';
-    mctx.font = 'bold 36px Cinzel, serif';
-    mctx.fillText('YOU (PLAYER)', 1024, 715);
-    mctx.font = '22px Plus Jakarta Sans';
+    mctx.font = 'bold 34px Cinzel, serif';
+    mctx.fillText('YOU', 1024, 730);
+    mctx.font = 'bold 22px Plus Jakarta Sans';
     mctx.fillStyle = '#BAE6FD';
-    mctx.fillText('PAYS 1:1 • NATURAL 9: 2:1', 1024, 760);
+    mctx.fillText('REAL PLAYER SEAT • 1:1', 1024, 770);
 
     // 4. Center Tie & Natural 9
     mctx.strokeStyle = '#10B981';
     mctx.lineWidth = 5;
-    mctx.strokeRect(1440, 280, 420, 180);
+    mctx.strokeRect(1460, 280, 420, 180);
     mctx.fillStyle = '#10B981';
     mctx.font = 'bold 32px Cinzel, serif';
-    mctx.fillText('TIE PAYS 8:1', 1650, 375);
+    mctx.fillText('TIE PAYS 8:1', 1670, 375);
 
     mctx.strokeStyle = '#F59E0B';
     mctx.lineWidth = 5;
-    mctx.strokeRect(1440, 520, 420, 180);
+    mctx.strokeRect(1460, 520, 420, 180);
     mctx.fillStyle = '#F59E0B';
     mctx.font = 'bold 30px Cinzel, serif';
-    mctx.fillText('NATURAL 9 PAYS 3:1', 1650, 615);
+    mctx.fillText('NATURAL 9 PAYS 3:1', 1670, 615);
 
     const markTexture = new THREE.CanvasTexture(markCanvas);
     const markMat = new THREE.MeshBasicMaterial({
@@ -507,15 +534,47 @@ export const Lucky9Scene: React.FC<Lucky9SceneProps> = ({
       cardsGroup.remove(cardsGroup.children[0]);
     }
 
-    const cardWidth = 0.95;
-    const cardHeight = 1.33;
-    const cardThickness = 0.015;
+    const cardWidth = 1.28;
+    const cardHeight = 1.82;
+    const cardThickness = 0.02;
+
+    const createPlaceholderMesh = (label: string, colorHex: string, fillRgba: string) => {
+      const geo = new THREE.PlaneGeometry(cardWidth, cardHeight);
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 364;
+      const ctx = canvas.getContext('2d')!;
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 6;
+      ctx.setLineDash([16, 12]);
+      ctx.strokeRect(10, 10, 236, 344);
+      ctx.fillStyle = fillRgba;
+      ctx.fillRect(10, 10, 236, 344);
+      ctx.fillStyle = colorHex;
+      ctx.font = 'bold 28px Cinzel, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, 128, 165);
+      ctx.font = 'bold 18px Plus Jakarta Sans';
+      ctx.fillText('CARD SLOT', 128, 205);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.85,
+        depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.y = 0.012;
+      return mesh;
+    };
 
     const createCardMesh = (card: Card, faceUp: boolean) => {
       const cardGeo = new THREE.BoxGeometry(cardWidth, cardThickness, cardHeight);
       const faceMat = new THREE.MeshStandardMaterial({
         map: getCardFaceTexture(card),
-        roughness: 0.4,
+        roughness: 0.35,
         metalness: 0.1,
       });
       const backMat = new THREE.MeshStandardMaterial({
@@ -524,8 +583,8 @@ export const Lucky9Scene: React.FC<Lucky9SceneProps> = ({
         metalness: 0.2,
       });
       const edgeMat = new THREE.MeshStandardMaterial({
-        color: 0xf1f5f9,
-        roughness: 0.8,
+        color: 0xf8fafc,
+        roughness: 0.7,
       });
 
       const materials = [edgeMat, edgeMat, faceMat, backMat, edgeMat, edgeMat];
@@ -539,35 +598,64 @@ export const Lucky9Scene: React.FC<Lucky9SceneProps> = ({
       return mesh;
     };
 
-    // 1. PLAYER CARDS: Bottom Center
-    playerCards.forEach((card, idx) => {
-      const mesh = createCardMesh(card, true);
-      const targetX = (idx - (playerCards.length - 1) / 2) * 1.1;
-      const targetZ = 1.1;
-      mesh.position.set(targetX, 0.05 + idx * 0.012, targetZ);
-      mesh.rotation.y = (idx - 0.5) * 0.04;
-      cardsGroup.add(mesh);
-    });
+    // 1. PLAYER CARDS (Bottom Center): Dealt cards or 2 glowing card slots
+    if (playerCards.length === 0) {
+      // 2 Placeholder Slots
+      [-0.72, 0.72].forEach((slotX) => {
+        const ph = createPlaceholderMesh('YOU', '#38BDF8', 'rgba(56, 189, 248, 0.1)');
+        ph.position.set(slotX, 0.012, 0.12);
+        cardsGroup.add(ph);
+      });
+    } else {
+      playerCards.forEach((card, idx) => {
+        const mesh = createCardMesh(card, true);
+        const targetX = (idx - (playerCards.length - 1) / 2) * 1.4;
+        const targetZ = 0.12;
+        mesh.position.set(targetX, 0.08 + idx * 0.018, targetZ);
+        mesh.rotation.x = -0.28; // Tilted toward player's eyes!
+        mesh.rotation.y = (idx - (playerCards.length - 1) / 2) * 0.06;
+        cardsGroup.add(mesh);
+      });
+    }
 
-    // 2. ENEMY / OPPONENT CARDS: Top Center (directly in front of player across the table)
-    enemyCards.forEach((card, idx) => {
-      const mesh = createCardMesh(card, true);
-      const targetX = (idx - (enemyCards.length - 1) / 2) * 1.1;
-      const targetZ = -0.7;
-      mesh.position.set(targetX, 0.05 + idx * 0.012, targetZ);
-      mesh.rotation.y = Math.PI - (idx - 0.5) * 0.04; // Rotated facing player!
-      cardsGroup.add(mesh);
-    });
+    // 2. ENEMY / OPPONENT CARDS (Top Center): Dealt cards or 2 glowing card slots
+    if (enemyCards.length === 0) {
+      [-0.72, 0.72].forEach((slotX) => {
+        const ph = createPlaceholderMesh('RIVAL', '#C084FC', 'rgba(192, 132, 252, 0.1)');
+        ph.position.set(slotX, 0.012, -1.1);
+        cardsGroup.add(ph);
+      });
+    } else {
+      enemyCards.forEach((card, idx) => {
+        const mesh = createCardMesh(card, true);
+        const targetX = (idx - (enemyCards.length - 1) / 2) * 1.4;
+        const targetZ = -1.1;
+        mesh.position.set(targetX, 0.08 + idx * 0.018, targetZ);
+        mesh.rotation.x = 0.28; // Tilted toward player
+        mesh.rotation.y = Math.PI - (idx - (enemyCards.length - 1) / 2) * 0.06;
+        cardsGroup.add(mesh);
+      });
+    }
 
-    // 3. BANKER CARDS: Left Side of Table
-    bankerCards.forEach((card, idx) => {
-      const mesh = createCardMesh(card, true);
-      const targetX = -2.1 + idx * 1.05;
-      const targetZ = 0.1;
-      mesh.position.set(targetX, 0.05 + idx * 0.012, targetZ);
-      mesh.rotation.y = Math.PI / 2 + (idx - 0.5) * 0.04;
-      cardsGroup.add(mesh);
-    });
+    // 3. BANKER CARDS (Left Side - House Dealer): Dealt cards or 2 glowing card slots
+    if (bankerCards.length === 0) {
+      [-2.6, -1.8].forEach((slotX) => {
+        const ph = createPlaceholderMesh('HOUSE', '#F43F5E', 'rgba(244, 63, 94, 0.1)');
+        ph.position.set(slotX, 0.012, -0.2);
+        ph.rotation.z = Math.PI / 6;
+        cardsGroup.add(ph);
+      });
+    } else {
+      bankerCards.forEach((card, idx) => {
+        const mesh = createCardMesh(card, true);
+        const targetX = -2.4 + idx * 1.25;
+        const targetZ = -0.2;
+        mesh.position.set(targetX, 0.08 + idx * 0.018, targetZ);
+        mesh.rotation.x = -0.15;
+        mesh.rotation.y = Math.PI / 4 + (idx - 0.5) * 0.05;
+        cardsGroup.add(mesh);
+      });
+    }
   }, [playerCards, enemyCards, bankerCards]);
 
   // Render 3D Chip Stacks
